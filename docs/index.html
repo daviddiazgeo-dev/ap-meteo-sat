@@ -387,7 +387,7 @@ function downloadWord() {
       `<b>Nivel de alerta:</b> ${esc(SEV_LABEL[a.color] || a.severidad || 's/d')}<br>` +
       `<b>Vigencia:</b> ${esc(fmtFecha(a.inicio))} a ${esc(fmtFecha(a.fin))}</li>`
     ).join('');
-    return `<h2>${esc(p.nombre)}</h2><p>${esc(p.categoria)} · ${esc(p.provincia)}</p><ul>${items}</ul>`;
+    return `<h2>${esc(p.nombre)}</h2><ul>${items}</ul>`;
   }).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Informe alertas SMN-APN</title>
@@ -399,7 +399,6 @@ h1{font-size:18pt;}h2{font-size:14pt;margin-top:18pt;}li{margin-bottom:8pt;}</st
 <p>Generado: ${esc(generado)}</p>
 <p>Solo se incluyen alertas vigentes que se superponen con un área protegida. Agrupado por parque.</p>
 ${body}
-<p style="margin-top:24pt;font-size:10pt;color:#555">Índice de apoyo automatizado. No reemplaza la matriz institucional Probabilidad × Consecuencia de APN.</p>
 </body></html>`;
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const a = document.createElement('a');
@@ -421,7 +420,6 @@ function downloadPdf() {
   ];
   parks.forEach((p) => {
     content.push({ text: p.nombre, style: 'h2' });
-    content.push({ text: `${p.categoria} · ${p.provincia}`, style: 'meta' });
     content.push({
       ul: p.alertas.map((a) => ({
         text: [
@@ -433,11 +431,6 @@ function downloadPdf() {
       })),
       margin: [8, 4, 0, 10],
     });
-  });
-  content.push({
-    text: 'Índice de apoyo automatizado. No reemplaza la matriz institucional Probabilidad × Consecuencia de APN.',
-    style: 'nota',
-    margin: [0, 16, 0, 0],
   });
   pdfMake.createPdf({
     pageSize: 'A4',
