@@ -2,7 +2,7 @@
 """
 Sistema de Monitoreo Automático de Alertas SMN para Áreas Protegidas APN
 ==========================================================================
-APN · Coordinación de Gestión Integral del Riesgo
+Gestión Integral del Riesgo
 
 Corre dentro de GitHub Actions (server-side, sin restricción CORS/navegador).
 En cada ejecución:
