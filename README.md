@@ -17,7 +17,7 @@ Pensado para la Coordinación de Gestión Integral del Riesgo: saber *si* una al
 | **David Diaz** | Definición del problema institucional, validación con Áreas Protegidas APN y operación del sistema en Gestión Integral del Riesgo. |
 | **Diego Coria** | Diseño e implementación del software (Python, visor web, GitHub Actions, informe Word/PDF). |
 
-Contacto operativo de alertas: `david.diaz.geo@gmail.com`.
+
 
 ---
 
