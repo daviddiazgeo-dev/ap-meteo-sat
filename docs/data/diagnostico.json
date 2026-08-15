@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-08-15T01:01:15.630625+00:00",
+  "sistema_ciego": true,
+  "smn_canales": [
+    {
+      "canal": "Alertas y Advertencias",
+      "url_usada": "https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml",
+      "rss_accedido": false,
+      "links_cap_encontrados": 0,
+      "xml_cap_descargados_ok": 0,
+      "xml_cap_descargados_fallidos": 0,
+      "error": "403 Client Error: Forbidden for url: https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml"
+    },
+    {
+      "canal": "Temperaturas Extremas",
+      "url_usada": "https://ssl.smn.gob.ar/feeds/CAP/oladecalor/rss_ola_calor_nuevo.xml",
+      "rss_accedido": false,
+      "links_cap_encontrados": 0,
+      "xml_cap_descargados_ok": 0,
+      "xml_cap_descargados_fallidos": 0,
+      "error": "403 Client Error: Forbidden for url: https://ssl.smn.gob.ar/feeds/CAP/oladecalor/rss_ola_calor_nuevo.xml"
+    },
+    {
+      "canal": "Aviso a Muy Corto Plazo",
+      "url_usada": "https://ssl.smn.gob.ar/feeds/CAP/avisocortoplazo/rss_acpCAP.xml",
+      "rss_accedido": false,
+      "links_cap_encontrados": 0,
+      "xml_cap_descargados_ok": 0,
+      "xml_cap_descargados_fallidos": 0,
+      "error": "403 Client Error: Forbidden for url: https://ssl.smn.gob.ar/feeds/CAP/avisocortoplazo/rss_acpCAP.xml"
+    }
+  ],
+  "areas_apn": {
+    "fuente_usada": "shapefile_local",
+    "wfs_url": "https://mapas.apn.gob.ar/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typename=geonode%3Aapn_limite&outputFormat=json&srs=EPSG:4326&srsName=EPSG:4326",
+    "cantidad_areas_cargadas": 52
+  },
+  "alertas_severidad_relevante": 0,
+  "alertas_ignoradas_por_severidad": 0
+}

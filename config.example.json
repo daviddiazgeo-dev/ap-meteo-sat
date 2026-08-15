@@ -1,0 +1,14 @@
+{
+  "fallback_shapefile_path": "data/SiFAP_APN.shp",
+  "output_dir": "docs/data",
+  "historial_path": "historial.json",
+  "visor_url": "https://TU_USUARIO.github.io/TU_REPO/",
+  "recipients": ["david.diaz.geo@gmail.com"],
+  "smtp": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "username": "tu_cuenta@gmail.com",
+    "password": "CONTRASEÑA_DE_APLICACION_AQUI",
+    "from_address": "tu_cuenta@gmail.com"
+  }
+}

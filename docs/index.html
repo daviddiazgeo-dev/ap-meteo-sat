@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APN · Monitor de Amenazas Meteorológicas</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest-950:#0e1f18;
+    --forest-900:#122a20;
+    --forest-800:#1a3a2b;
+    --forest-700:#234f39;
+    --moss-500:#4f8a5f;
+    --parchment:#f2ede1;
+    --ink:#16201a;
+    --sev-rojo:#c0442b;
+    --sev-naranja:#d98b2e;
+    --sev-amarillo:#d9b23c;
+    --line:rgba(242,237,225,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--forest-950);color:var(--parchment);overflow:hidden;}
+  .app{display:grid;grid-template-columns:400px 1fr;height:100vh;width:100vw;}
+  @media (max-width: 860px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr;}.sidebar{max-height:56vh;}}
+
+  .sidebar{background:linear-gradient(180deg, var(--forest-900), var(--forest-950) 70%);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+  .brand{padding:20px 22px 14px 22px;border-bottom:1px solid var(--line);position:relative;}
+  .brand::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg, var(--sev-naranja), var(--forest-700));}
+  .brand .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--moss-500);margin:0 0 6px 0;}
+  .brand h1{font-family:'Spectral',serif;font-size:21px;line-height:1.15;font-weight:600;margin:0 0 4px 0;}
+  .brand p{margin:0;font-size:12px;color:rgba(242,237,225,0.55);line-height:1.4;}
+
+  .summary{padding:14px 22px;border-bottom:1px solid var(--line);}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .summary-card{background:var(--forest-900);border:1px solid var(--line);border-radius:4px;padding:10px 12px;}
+  .summary-card .num{font-family:'Spectral',serif;font-size:24px;font-weight:700;line-height:1;}
+  .summary-card .lbl{font-size:10px;color:rgba(242,237,225,0.5);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;}
+  .summary-card.rojo .num{color:var(--sev-rojo);}
+  .summary-card.naranja .num{color:var(--sev-naranja);}
+  .summary-card.amarillo .num{color:var(--sev-amarillo);}
+  .summary-updated{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(242,237,225,0.4);display:flex;align-items:center;gap:5px;}
+  .summary-updated .dot{width:6px;height:6px;border-radius:50%;background:var(--moss-500);}
+  .summary-updated.ciego .dot{background:var(--sev-rojo);}
+  .sys-banner{display:none;margin:0 22px 12px 22px;padding:10px 12px;border:1px solid rgba(192,68,43,0.45);background:rgba(192,68,43,0.12);color:#e8836a;font-size:12px;line-height:1.45;border-radius:4px;}
+  .sys-banner.visible{display:block;}
+
+  .section-label{padding:12px 22px 8px 22px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(242,237,225,0.4);}
+  .list{flex:1;overflow-y:auto;padding:0 14px 14px 14px;}
+  .list::-webkit-scrollbar{width:6px;}
+  .list::-webkit-scrollbar-thumb{background:var(--forest-700);border-radius:3px;}
+
+  .empty-state{margin:12px 8px;padding:18px 16px;border:1px solid var(--line);border-radius:4px;text-align:center;}
+  .empty-state .glyph{font-size:20px;margin-bottom:6px;opacity:0.5;}
+  .empty-state p{font-size:12px;color:rgba(242,237,225,0.5);margin:0;line-height:1.5;}
+
+  .area-card{background:var(--forest-900);border:1px solid var(--line);border-left:3px solid var(--moss-500);border-radius:3px;padding:11px 13px;margin-bottom:7px;cursor:pointer;}
+  .area-card:hover{background:var(--forest-800);}
+  .area-card.rojo{border-left-color:var(--sev-rojo);}
+  .area-card.naranja{border-left-color:var(--sev-naranja);}
+  .area-card.amarillo{border-left-color:var(--sev-amarillo);}
+  .area-card .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;}
+  .area-card .nombre{font-family:'Spectral',serif;font-weight:600;font-size:13.5px;}
+  .sev-pill{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;padding:2px 7px;border-radius:20px;white-space:nowrap;}
+  .sev-pill.rojo{background:rgba(192,68,43,0.2);color:#e8836a;}
+  .sev-pill.naranja{background:rgba(217,139,46,0.2);color:var(--sev-naranja);}
+  .sev-pill.amarillo{background:rgba(217,178,60,0.2);color:var(--sev-amarillo);}
+  .area-card .fenomeno{font-size:11.5px;color:rgba(242,237,225,0.7);}
+  .area-card .meta{margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(242,237,225,0.35);}
+
+  .footer-note{padding:12px 22px;border-top:1px solid var(--line);font-size:10px;color:rgba(242,237,225,0.35);line-height:1.5;}
+  .footer-note a{color:var(--moss-500);}
+
+  .map-wrap{position:relative;}
+  #map{height:100%;width:100%;background:var(--forest-950);}
+  .leaflet-popup-content-wrapper{background:var(--parchment);color:var(--ink);border-radius:3px;}
+  .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12.5px;}
+  .leaflet-popup-content h4{font-family:'Spectral',serif;margin:0 0 4px 0;font-size:15px;}
+  .leaflet-popup-tip{background:var(--parchment);}
+
+  .map-legend{position:absolute;bottom:18px;left:18px;z-index:400;background:rgba(14,31,24,0.9);border:1px solid var(--line);border-radius:4px;padding:10px 14px;font-size:11px;backdrop-filter:blur(4px);}
+  .map-legend .row{display:flex;align-items:center;gap:7px;margin:3px 0;}
+  .map-legend .swatch{width:11px;height:11px;border-radius:2px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Coordinación de Gestión Integral del Riesgo</p>
+      <h1>Monitor de Amenazas Meteorológicas</h1>
+      <p>Articulación SAT SMN - Áreas protegidas de la APN</p>
+    </div>
+
+    <div class="summary">
+      <div class="summary-grid">
+        <div class="summary-card"><div class="num" id="sumVigentes">–</div><div class="lbl">Alertas vigentes</div></div>
+        <div class="summary-card"><div class="num" id="sumAreas">–</div><div class="lbl">Áreas afectadas</div></div>
+        <div class="summary-card rojo"><div class="num" id="sumRojas">–</div><div class="lbl">Rojas</div></div>
+        <div class="summary-card naranja"><div class="num" id="sumNaranjas">–</div><div class="lbl">Naranjas</div></div>
+        <div class="summary-card amarillo"><div class="num" id="sumAmarillas">–</div><div class="lbl">Amarillas</div></div>
+        <div class="summary-card"><div class="num" id="sumFuente" style="font-size:13px;">–</div><div class="lbl">Fuente de áreas</div></div>
+      </div>
+      <div class="summary-updated" id="sumUpdatedWrap"><span class="dot"></span><span id="sumUpdated">Cargando...</span></div>
+    </div>
+    <div class="sys-banner" id="sysBanner"></div>
+
+    <div class="section-label">Áreas protegidas afectadas</div>
+    <div class="list" id="areasList">
+      <div class="empty-state"><div class="glyph">◈</div><p>Cargando datos publicados...</p></div>
+    </div>
+
+    <div class="footer-note">
+      Datos generados automáticamente cada hora por GitHub Actions. Fuente meteorológica: <a href="https://www.smn.gob.ar" target="_blank" rel="noopener">SMN · Sistema de Alerta Temprana</a>. Índice visual de apoyo — no reemplaza la matriz institucional Probabilidad × Consecuencia de APN.
+    </div>
+  </aside>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="row"><span class="swatch" style="background:#2f6b4a"></span>Área protegida (APN)</div>
+      <div class="row"><span class="swatch" style="background:#c0442b"></span>Área afectada</div>
+      <div class="row"><span class="swatch" style="background:#c0442b;opacity:0.5"></span>Alerta — Extreme</div>
+      <div class="row"><span class="swatch" style="background:#d98b2e;opacity:0.5"></span>Alerta — Severe</div>
+      <div class="row"><span class="swatch" style="background:#d9b23c;opacity:0.5"></span>Alerta — Moderate</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+
+const map = L.map('map', { zoomControl: false }).setView([-40.5, -65.5], 4);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gris@EPSG%3A3857@png/{z}/{x}/{-y}.png', {
+  attribution: 'Instituto Geográfico Nacional (IGN) — Argenmap',
+  maxZoom: 18,
+}).addTo(map);
+
+const AREA_STYLE = { color: '#4f8a5f', weight: 1.2, fillColor: '#2f6b4a', fillOpacity: 0.16 };
+const AREA_AFFECTED_STYLE = { color: '#e8836a', weight: 2, fillColor: '#c0442b', fillOpacity: 0.4 };
+const SEV_COLOR = { rojo: '#c0442b', naranja: '#d98b2e', amarillo: '#d9b23c' };
+const SEV_LABEL = { rojo: 'Extreme', naranja: 'Severe', amarillo: 'Moderate' };
+
+const areasLayerGroup = L.layerGroup().addTo(map);
+const alertsLayerGroup = L.layerGroup().addTo(map);
+let areaLayersByName = {};
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+async function loadJson(path) {
+  const res = await fetch(path, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`No se pudo leer ${path} (HTTP ${res.status})`);
+  return res.json();
+}
+
+function fmtFecha(iso) {
+  if (!iso) return 's/d';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function setEmpty(listEl, glyph, message) {
+  listEl.replaceChildren();
+  const box = el('div', 'empty-state');
+  box.appendChild(el('div', 'glyph', glyph));
+  const p = el('p');
+  p.textContent = message;
+  box.appendChild(p);
+  listEl.appendChild(box);
+}
+
+async function init() {
+  const bust = `?t=${Date.now()}`;
+  let areasFc, alertasFc, areasAfectadas, resumen, diagnostico;
+
+  try {
+    [areasFc, alertasFc, areasAfectadas, resumen, diagnostico] = await Promise.all([
+      loadJson('./data/areas.geojson' + bust),
+      loadJson('./data/alertas.geojson' + bust),
+      loadJson('./data/areas_afectadas.json' + bust),
+      loadJson('./data/resumen.json' + bust),
+      loadJson('./data/diagnostico.json' + bust).catch(() => null),
+    ]);
+  } catch (err) {
+    setEmpty(
+      document.getElementById('areasList'),
+      '!',
+      'No se pudieron cargar los datos publicados. ' + err.message + ' Esto es normal antes de la primera ejecución del workflow.'
+    );
+    document.getElementById('sumUpdated').textContent = 'Sin datos todavía';
+    return;
+  }
+
+  const canales = (diagnostico && diagnostico.smn_canales) || [];
+  const ciego = !!(diagnostico && (diagnostico.sistema_ciego || (canales.length && canales.every((c) => !c.rss_accedido))));
+  const banner = document.getElementById('sysBanner');
+  if (ciego) {
+    banner.textContent = 'Sin acceso a los feeds del SMN en la última corrida. Los ceros de este panel no significan “no hay amenaza”: el sistema está ciego. Abrí data/diagnostico.json.';
+    banner.classList.add('visible');
+    document.getElementById('sumUpdatedWrap').classList.add('ciego');
+  }
+
+  document.getElementById('sumVigentes').textContent = resumen.total_alertas_vigentes ?? 0;
+  document.getElementById('sumAreas').textContent = resumen.total_areas_afectadas ?? 0;
+  document.getElementById('sumRojas').textContent = resumen.total_rojas ?? 0;
+  document.getElementById('sumNaranjas').textContent = resumen.total_naranjas ?? 0;
+  document.getElementById('sumAmarillas').textContent = resumen.total_amarillas ?? 0;
+  document.getElementById('sumFuente').textContent = resumen.areas_source === 'wfs' ? 'WFS APN' : 'Respaldo local';
+  document.getElementById('sumUpdated').textContent = 'Actualizado: ' + fmtFecha(resumen.generated_at);
+
+  const nombresAfectados = new Set((areasAfectadas || []).map((a) => a.area_protegida));
+
+  L.geoJSON(areasFc, {
+    style: (f) => nombresAfectados.has(f.properties.nombre) ? AREA_AFFECTED_STYLE : AREA_STYLE,
+    onEachFeature: (f, layer) => {
+      const p = f.properties;
+      layer.bindPopup(`<h4>${esc(p.nombre)}</h4>${esc(p.categoria)} · ${esc(p.provincia)}`);
+      areaLayersByName[p.nombre] = layer;
+    },
+  }).addTo(areasLayerGroup);
+
+  const alertasVigentes = (alertasFc.features || []).filter((f) => f.properties && f.properties.vigente !== false);
+  alertasVigentes.forEach((f) => {
+    const p = f.properties;
+    const color = SEV_COLOR[p.color] || '#999';
+    const afecta = (p.areas_afectadas && p.areas_afectadas.length)
+      ? '<br><b>Afecta:</b> ' + p.areas_afectadas.map(esc).join(', ')
+      : '<br><i>Sin áreas APN afectadas</i>';
+    L.geoJSON(f, {
+      style: { color, weight: 1.5, fillColor: color, fillOpacity: 0.22, dashArray: '4,3' },
+    }).bindPopup(
+      `<h4>${esc(p.fenomeno)}</h4>` +
+      `<b>${esc(p.tipo || p.origen)}</b> · ${esc(SEV_LABEL[p.color] || p.severidad)}<br>` +
+      `Vigencia: ${esc(fmtFecha(p.onset))} a ${esc(fmtFecha(p.expires))}` +
+      afecta
+    ).addTo(alertsLayerGroup);
+  });
+
+  const listEl = document.getElementById('areasList');
+  if (!areasAfectadas.length) {
+    setEmpty(
+      listEl,
+      ciego ? '!' : 'OK',
+      ciego
+        ? 'No hay datos de cruce porque no se pudieron leer las alertas del SMN.'
+        : 'No hay áreas protegidas afectadas por alertas vigentes en este momento.'
+    );
+    return;
+  }
+
+  listEl.replaceChildren();
+  const orden = { rojo: 0, naranja: 1, amarillo: 2 };
+  const ordenadas = [...areasAfectadas].sort((a, b) => (orden[a.color] ?? 9) - (orden[b.color] ?? 9));
+  ordenadas.forEach((a) => {
+    const card = el('div', 'area-card ' + (a.color || ''));
+    const top = el('div', 'top-row');
+    top.appendChild(el('div', 'nombre', a.area_protegida || ''));
+    top.appendChild(el('div', 'sev-pill ' + (a.color || ''), SEV_LABEL[a.color] || a.severidad || ''));
+    card.appendChild(top);
+    card.appendChild(el('div', 'fenomeno', `${a.fenomeno || ''} · ${a.categoria || ''}, ${a.provincia || ''}`));
+    card.appendChild(el('div', 'meta', `${a.origen || ''} · ${fmtFecha(a.inicio)} → ${fmtFecha(a.fin)}`));
+    card.addEventListener('click', () => {
+      const layer = areaLayersByName[a.area_protegida];
+      if (layer) { map.fitBounds(layer.getBounds(), { maxZoom: 9, padding: [40, 40] }); layer.openPopup(); }
+    });
+    listEl.appendChild(card);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

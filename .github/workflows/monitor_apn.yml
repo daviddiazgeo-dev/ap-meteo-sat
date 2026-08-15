@@ -1,0 +1,58 @@
+name: Monitor SMN - Áreas Protegidas APN
+
+on:
+  schedule:
+    # Cada hora, en el minuto 0. GitHub puede demorar el disparo unos
+    # minutos en horarios de alta demanda; es normal y no afecta el flujo.
+    - cron: "0 * * * *"
+  workflow_dispatch: {}  # permite disparar la revisión manualmente desde la pestaña "Actions"
+
+permissions:
+  contents: write  # necesario para que el workflow pueda hacer commit de los productos generados
+
+jobs:
+  monitorear:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Autotest de geometría (sin red)
+        run: python scripts/monitor_smn_apn.py --self-test
+
+      - name: Generar config.json desde Secrets
+        env:
+          APN_SMTP_HOST: ${{ secrets.APN_SMTP_HOST }}
+          APN_SMTP_PORT: ${{ secrets.APN_SMTP_PORT }}
+          APN_SMTP_USER: ${{ secrets.APN_SMTP_USER }}
+          APN_SMTP_PASS: ${{ secrets.APN_SMTP_PASS }}
+          APN_RECIPIENTS_JSON: ${{ secrets.APN_RECIPIENTS_JSON }}
+          APN_VISOR_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: python scripts/monitor_smn_apn.py --write-config-from-env --config config.json
+
+      - name: Ejecutar monitoreo
+        id: monitor
+        continue-on-error: true
+        run: python scripts/monitor_smn_apn.py --config config.json
+
+      - name: Publicar productos generados y actualizar historial
+        if: always()
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Actualiza alertas SMN y áreas afectadas [skip ci]"
+          file_pattern: "docs/data/*.json docs/data/*.geojson historial.json"
+
+      - name: Fallar si el SMN quedó inaccesible
+        if: steps.monitor.outcome == 'failure'
+        run: |
+          echo "El monitor terminó con error (sistema ciego o fallo de ejecución)."
+          echo "Revisá docs/data/diagnostico.json en el commit publicado y el banner del visor."
+          exit 1
