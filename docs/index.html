@@ -106,7 +106,7 @@
 
     <div class="summary">
       <div class="summary-grid">
-        <div class="summary-card"><div class="num" id="sumVigentes">–</div><div class="lbl">Alertas vigentes</div></div>
+        <div class="summary-card"><div class="num" id="sumVigentes">–</div><div class="lbl">Alertas sobre AP</div></div>
         <div class="summary-card"><div class="num" id="sumAreas">–</div><div class="lbl">Áreas afectadas</div></div>
         <div class="summary-card rojo"><div class="num" id="sumRojas">–</div><div class="lbl">Rojas</div></div>
         <div class="summary-card naranja"><div class="num" id="sumNaranjas">–</div><div class="lbl">Naranjas</div></div>
@@ -134,7 +134,7 @@
       <div class="manual-status" id="xmlStatus"></div>
     </div>
 
-    <div class="section-label">Áreas protegidas afectadas</div>
+    <div class="section-label">Alertas sobre áreas protegidas</div>
     <div class="list" id="areasList">
       <div class="empty-state"><div class="glyph">◈</div><p>Cargando datos publicados...</p></div>
     </div>
@@ -147,11 +147,11 @@
   <div class="map-wrap">
     <div id="map"></div>
     <div class="map-legend">
-      <div class="row"><span class="swatch" style="background:#2f6b4a"></span>Área protegida (APN)</div>
-      <div class="row"><span class="swatch" style="background:#c0442b"></span>Área afectada</div>
-      <div class="row"><span class="swatch" style="background:#c0442b;opacity:0.5"></span>Alerta — Extreme</div>
-      <div class="row"><span class="swatch" style="background:#d98b2e;opacity:0.5"></span>Alerta — Severe</div>
-      <div class="row"><span class="swatch" style="background:#d9b23c;opacity:0.5"></span>Alerta — Moderate</div>
+      <div class="row"><span class="swatch" style="background:#2f6b4a"></span>Área protegida (sin alerta)</div>
+      <div class="row"><span class="swatch" style="background:#c0442b"></span>Área protegida afectada</div>
+      <div class="row"><span class="swatch" style="background:#c0442b;opacity:0.5"></span>Alerta roja</div>
+      <div class="row"><span class="swatch" style="background:#d98b2e;opacity:0.5"></span>Alerta naranja</div>
+      <div class="row"><span class="swatch" style="background:#d9b23c;opacity:0.5"></span>Alerta amarilla</div>
     </div>
   </div>
 </div>
@@ -171,7 +171,7 @@ L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gri
 const AREA_STYLE = { color: '#4f8a5f', weight: 1.2, fillColor: '#2f6b4a', fillOpacity: 0.16 };
 const AREA_AFFECTED_STYLE = { color: '#e8836a', weight: 2, fillColor: '#c0442b', fillOpacity: 0.4 };
 const SEV_COLOR = { rojo: '#c0442b', naranja: '#d98b2e', amarillo: '#d9b23c' };
-const SEV_LABEL = { rojo: 'Extreme', naranja: 'Severe', amarillo: 'Moderate' };
+const SEV_LABEL = { rojo: 'Roja', naranja: 'Naranja', amarillo: 'Amarilla' };
 
 const areasLayerGroup = L.layerGroup().addTo(map);
 const alertsLayerGroup = L.layerGroup().addTo(map);
@@ -342,11 +342,6 @@ function cruzar(alertas, areasFc) {
     const sev = (alert.severity || '').toLowerCase();
     if (!SEV_OK.has(sev)) return;
     const vigente = isVigente(alert.expires);
-    if (vigente) {
-      vigentes += 1;
-      const c = colorOf(alert.severity);
-      if (contador[c] != null) contador[c] += 1;
-    }
     const nombres = [];
     if (alert.geom && vigente) {
       (areasFc.features || []).forEach((area) => {
@@ -371,26 +366,28 @@ function cruzar(alertas, areasFc) {
         } catch (e) { /* geometría inválida */ }
       });
     }
-    if (alert.geom) {
-      features.push({
-        type: 'Feature',
-        geometry: alert.geom.geometry,
-        properties: {
-          identifier: alert.identifier,
-          origen: alert.origen,
-          tipo: alert.origen,
-          fenomeno: alert.event,
-          headline: alert.headline,
-          severidad: alert.severity,
-          color: colorOf(alert.severity),
-          onset: alert.onset,
-          expires: alert.expires,
-          description: alert.description,
-          vigente,
-          areas_afectadas: nombres,
-        },
-      });
-    }
+    if (!nombres.length) return;
+    vigentes += 1;
+    const c = colorOf(alert.severity);
+    if (contador[c] != null) contador[c] += 1;
+    features.push({
+      type: 'Feature',
+      geometry: alert.geom.geometry,
+      properties: {
+        identifier: alert.identifier,
+        origen: alert.origen,
+        tipo: alert.origen,
+        fenomeno: alert.event,
+        headline: alert.headline,
+        severidad: alert.severity,
+        color: colorOf(alert.severity),
+        onset: alert.onset,
+        expires: alert.expires,
+        description: alert.description,
+        vigente,
+        areas_afectadas: nombres,
+      },
+    });
   });
 
   return {
@@ -448,22 +445,31 @@ function renderDashboard(areasFc, alertasFc, areasAfectadas, resumen, diagnostic
     },
   }).addTo(areasLayerGroup);
 
-  const alertasVigentes = (alertasFc.features || []).filter((f) => f.properties && f.properties.vigente !== false);
-  alertasVigentes.forEach((f) => {
+  const alertasSobreAP = (alertasFc.features || []).filter((f) => {
+    const p = f.properties || {};
+    return p.vigente !== false && Array.isArray(p.areas_afectadas) && p.areas_afectadas.length > 0;
+  });
+  alertasSobreAP.forEach((f) => {
     const p = f.properties;
     const color = SEV_COLOR[p.color] || '#999';
-    const afecta = (p.areas_afectadas && p.areas_afectadas.length)
-      ? '<br><b>Afecta:</b> ' + p.areas_afectadas.map(esc).join(', ')
-      : '<br><i>Sin áreas APN afectadas</i>';
     L.geoJSON(f, {
-      style: { color, weight: 1.5, fillColor: color, fillOpacity: 0.22, dashArray: '4,3' },
+      style: { color, weight: 2, fillColor: color, fillOpacity: 0.28 },
     }).bindPopup(
       `<h4>${esc(p.fenomeno)}</h4>` +
-      `<b>${esc(p.tipo || p.origen)}</b> · ${esc(SEV_LABEL[p.color] || p.severidad)}<br>` +
-      `Vigencia: ${esc(fmtFecha(p.onset))} a ${esc(fmtFecha(p.expires))}` +
-      afecta
+      `<b>Alerta ${esc(SEV_LABEL[p.color] || p.severidad)}</b><br>` +
+      `Área protegida: ${p.areas_afectadas.map(esc).join(', ')}<br>` +
+      `Vigencia: ${esc(fmtFecha(p.onset))} a ${esc(fmtFecha(p.expires))}`
     ).addTo(alertsLayerGroup);
   });
+
+  if (nombresAfectados.size) {
+    const group = L.featureGroup(
+      [...nombresAfectados].map((n) => areaLayersByName[n]).filter(Boolean)
+    );
+    if (group.getLayers().length) {
+      map.fitBounds(group.getBounds(), { padding: [36, 36], maxZoom: 8 });
+    }
+  }
 
   const listEl = document.getElementById('areasList');
   if (!areasAfectadas.length) {
@@ -472,7 +478,7 @@ function renderDashboard(areasFc, alertasFc, areasAfectadas, resumen, diagnostic
       ciego && !opts.manual ? '!' : 'OK',
       ciego && !opts.manual
         ? 'No hay datos de cruce porque no se pudieron leer las alertas del SMN. Cargá los XML a mano.'
-        : 'No hay áreas protegidas afectadas por alertas vigentes en este momento.'
+        : 'Ninguna alerta vigente se superpone con un área protegida.'
     );
     return;
   }
@@ -483,11 +489,11 @@ function renderDashboard(areasFc, alertasFc, areasAfectadas, resumen, diagnostic
   ordenadas.forEach((a) => {
     const card = el('div', 'area-card ' + (a.color || ''));
     const top = el('div', 'top-row');
-    top.appendChild(el('div', 'nombre', a.area_protegida || ''));
-    top.appendChild(el('div', 'sev-pill ' + (a.color || ''), SEV_LABEL[a.color] || a.severidad || ''));
+    top.appendChild(el('div', 'nombre', a.fenomeno || 'Alerta'));
+    top.appendChild(el('div', 'sev-pill ' + (a.color || ''), 'Alerta ' + (SEV_LABEL[a.color] || a.severidad || '')));
     card.appendChild(top);
-    card.appendChild(el('div', 'fenomeno', `${a.fenomeno || ''} · ${a.categoria || ''}, ${a.provincia || ''}`));
-    card.appendChild(el('div', 'meta', `${a.origen || ''} · ${fmtFecha(a.inicio)} → ${fmtFecha(a.fin)}`));
+    card.appendChild(el('div', 'fenomeno', a.area_protegida || ''));
+    card.appendChild(el('div', 'meta', `${a.categoria || ''} · ${a.provincia || ''} · ${fmtFecha(a.inicio)} → ${fmtFecha(a.fin)}`));
     card.addEventListener('click', () => {
       const layer = areaLayersByName[a.area_protegida];
       if (layer) { map.fitBounds(layer.getBounds(), { maxZoom: 9, padding: [40, 40] }); layer.openPopup(); }
