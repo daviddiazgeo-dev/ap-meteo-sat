@@ -4,17 +4,14 @@ Visor y cruce espacial de **alertas meteorológicas del Servicio Meteorológico 
 
 Pensado para la Coordinación de Gestión Integral del Riesgo: saber *si* una alerta amarilla, naranja o roja pisa un parque, *cuál* es el fenómeno y *hasta cuándo* rige — y bajar un informe en Word o PDF.
 
-**Visor público:** [daviddiazgeo-dev.github.io/david-sat](https://daviddiazgeo-dev.github.io/david-sat/)  
-**Pasos simples (sin programar):** [daviddiazgeo-dev.github.io/david-sat/pasos.html](https://daviddiazgeo-dev.github.io/david-sat/pasos.html)  
-**Código:** [github.com/daviddiazgeo-dev/david-sat](https://github.com/daviddiazgeo-dev/david-sat)
-
+**Visor público:** [daviddiazgeo-dev.github.io/ap-meteo-sat](https://daviddiazgeo-dev.github.io/ap-meteo-sat/)  
 ---
 
 ## Autores
 
 | Autor | Rol |
 |---|---|
-| **David Diaz** | Definición del problema institucional, validación en Gestión Integral del Riesgo. |
+| **David Diaz** | Definición del problema institucional; validación en Gestión Integral del Riesgo. |
 | **Diego Coria** | Diseño e implementación del software (Python, visor web, GitHub Actions, informe Word/PDF). |
 
 
