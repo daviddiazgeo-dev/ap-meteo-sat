@@ -14,8 +14,8 @@ Pensado para la Coordinación de Gestión Integral del Riesgo: saber *si* una al
 
 | Autor | Rol |
 |---|---|
-| **Diego Coria** | Diseño e implementación del software (Python, visor web, GitHub Actions, informe Word/PDF). |
 | **David Diaz** | Definición del problema institucional, validación con Áreas Protegidas APN y operación del sistema en Gestión Integral del Riesgo. |
+| **Diego Coria** | Diseño e implementación del software (Python, visor web, GitHub Actions, informe Word/PDF). |
 
 Contacto operativo de alertas: `david.diaz.geo@gmail.com`.
 
@@ -194,4 +194,4 @@ Código y visor pensados para uso interno de apoyo a la decisión en APN. Las al
 
 ## Autores (cierre)
 
-**Diego Coria** y **David Diaz**, 2026.
+**David Diaz** y **Diego Coria**, 2026.
