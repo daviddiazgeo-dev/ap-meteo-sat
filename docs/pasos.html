@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cómo mirar las alertas — 4 pasos</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#0e1f18;color:#f2ede1;margin:0;padding:24px;line-height:1.45;max-width:720px;}
+  h1{font-size:26px;margin:0 0 8px 0;}
+  .lead{color:#c5d4c8;margin:0 0 24px 0;}
+  .paso{background:#122a20;border:1px solid rgba(242,237,225,0.14);border-radius:8px;padding:16px 18px;margin:0 0 14px 0;}
+  .num{display:inline-block;background:#4f8a5f;color:#0e1f18;font-weight:700;width:28px;height:28px;line-height:28px;text-align:center;border-radius:50%;margin-right:8px;}
+  h2{display:inline;font-size:18px;}
+  p{margin:10px 0 0 36px;color:#d7e0d8;}
+  a.smn{color:#8fbf9a;}
+  .fav{display:inline-block;margin:12px 0 0 36px;background:#4f8a5f;color:#0e1f18;font-weight:700;text-decoration:none;padding:12px 16px;border-radius:8px;font-size:16px;}
+  .hint{font-size:14px;color:#a9b8ad;margin-left:36px;}
+</style>
+</head>
+<body>
+<h1>Cómo ver si hay alerta en un parque</h1>
+<p class="lead">No hace falta saber de computadoras. La primera vez hacé el paso 1. Los otros días, solo 2, 3 y 4.</p>
+
+<div class="paso">
+  <span class="num">1</span><h2>Una sola vez: guardar el botón mágico</h2>
+  <p>Si no ves una barra de favoritos arriba (donde están las estrellitas), apretá a la vez las teclas <b>Ctrl</b> + <b>Mayús</b> + <b>B</b>.</p>
+  <p>Después <b>arrastrá</b> este botón verde hasta esa barra de arriba y soltalo. No lo toques con un clic acá.</p>
+  <a class="fav" id="bookmarklet" href="#">Bajar alertas SMN</a>
+  <p class="hint">Quedó bien si arriba aparece un botón que dice “Bajar alertas SMN”.</p>
+</div>
+
+<div class="paso">
+  <span class="num">2</span><h2>Abrí la lista del clima</h2>
+  <p>Tocá este link (se abre otra pestaña):<br>
+  <a class="smn" href="https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml" target="_blank" rel="noopener">Abrir alertas del SMN</a></p>
+  <p>Esperá a que se vea la lista (Tormentas, Viento, etc.).</p>
+</div>
+
+<div class="paso">
+  <span class="num">3</span><h2>Tocá el botón que guardaste</h2>
+  <p>En esa pestaña del SMN, tocá el favorito <b>Bajar alertas SMN</b> (arriba). Esperá. Va a aparecer un cartel que dice Listo y se baja un archivo llamado <b>smn-alertas.json</b> (está en la carpeta Descargas).</p>
+</div>
+
+<div class="paso">
+  <span class="num">4</span><h2>Mirá el mapa y, si querés, bajá el informe</h2>
+  <p>Volvé al <a class="smn" href="./index.html">visor</a>. Tocá <b>Elegir archivo</b>, buscá <b>smn-alertas.json</b>, después <b>Procesar</b>. Ahí ves solo los parques con alerta. Si hay alguno, tocá <b>Descargar Word</b> o <b>Descargar PDF</b>.</p>
+</div>
+
+<script>
+(async function () {
+  const a = document.getElementById("bookmarklet");
+  try {
+    const src = await (await fetch("./bajar-caps-smn.js?t=" + Date.now())).text();
+    a.href = "javascript:" + encodeURIComponent(src);
+  } catch (e) {
+    a.href = "#";
+  }
+  a.addEventListener("click", function (ev) {
+    ev.preventDefault();
+    alert("No lo toques acá. Agarralo con el mouse, arrastralo hasta la barra de favoritos de arriba y soltalo. Eso se hace una sola vez.");
+  });
+})();
+</script>
+</body>
+</html>

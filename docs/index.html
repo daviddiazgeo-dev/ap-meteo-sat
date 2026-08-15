@@ -51,6 +51,8 @@
   .manual-box{margin:0 14px 10px 14px;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--forest-900);}
   .manual-box p{margin:0 0 8px 0;font-size:11px;color:rgba(242,237,225,0.55);line-height:1.45;}
   .manual-box a{color:var(--moss-500);}
+  .fav-btn{display:inline-block;background:var(--moss-500);color:var(--forest-950);font-weight:700;text-decoration:none;padding:10px 14px;border-radius:4px;font-size:13px;}
+  .manual-box a.fav-btn{color:var(--forest-950);}
   .manual-box input[type=file]{display:block;width:100%;font-size:11px;color:rgba(242,237,225,0.7);margin:6px 0;}
   .manual-box textarea{width:100%;min-height:64px;resize:vertical;background:var(--forest-950);color:var(--parchment);border:1px solid var(--line);border-radius:3px;font-size:11px;padding:6px;font-family:'JetBrains Mono',monospace;}
   .manual-box button{margin-top:6px;margin-right:6px;background:var(--forest-700);color:var(--parchment);border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:11px;cursor:pointer;}
@@ -124,19 +126,13 @@
     </div>
     <div class="sys-banner" id="sysBanner"></div>
 
-    <div class="section-label">Carga manual SMN</div>
+    <div class="section-label">Cómo cargar las alertas</div>
     <div class="manual-box">
-      <p><b>1.</b> Abrí el RSS del SMN en otra pestaña (tu navegador sí puede).</p>
-      <p><b>2.</b> Ahí: F12 → Consola → pegá el script → Enter. Se baja un solo archivo <code>smn-alertas.json</code> con todos los CAP (no hace falta abrir los ~100 links).</p>
-      <p><b>3.</b> Volvé acá, elegí ese JSON y tocá Procesar.</p>
-      <p>
-        <a href="https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml" target="_blank" rel="noopener">Alertas</a>
-        · <a href="https://ssl.smn.gob.ar/feeds/CAP/oladecalor/rss_ola_calor_nuevo.xml" target="_blank" rel="noopener">Ola de calor</a>
-        · <a href="https://ssl.smn.gob.ar/feeds/CAP/avisocortoplazo/rss_acpCAP.xml" target="_blank" rel="noopener">ACP</a>
-      </p>
-      <button type="button" id="copyScript">Copiar script para la consola del SMN</button>
+      <p><b>Una sola vez:</b> si no ves favoritos arriba, apretá Ctrl+Mayús+B. Después <b>arrastrá</b> el botón verde a esa barra (no lo toques con un clic).</p>
+      <p><a class="fav-btn" id="bookmarklet" href="#">Bajar alertas SMN</a></p>
+      <p><b>Cada vez:</b> 1) <a href="https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml" target="_blank" rel="noopener">abrí las alertas del SMN</a> · 2) en esa pestaña tocá el favorito <b>Bajar alertas SMN</b> · 3) acá elegí el archivo <code>smn-alertas.json</code> (carpeta Descargas) y tocá Procesar.</p>
+      <p><a href="./pasos.html" target="_blank" rel="noopener">Instrucciones más largas, paso a paso</a></p>
       <input id="xmlFiles" type="file" accept=".json,.xml,text/xml,application/xml,.txt,application/json" multiple />
-      <textarea id="xmlPaste" placeholder="O pegá acá un XML suelto"></textarea>
       <button type="button" id="xmlProcess">Procesar</button>
       <div class="manual-status" id="xmlStatus"></div>
     </div>
@@ -680,7 +676,8 @@ async function handleManualXml() {
     return;
   }
   const files = document.getElementById("xmlFiles").files;
-  const paste = document.getElementById("xmlPaste").value.trim();
+  const pasteEl = document.getElementById("xmlPaste");
+  const paste = pasteEl ? pasteEl.value.trim() : "";
   const texts = [];
   texts._names = [];
   for (const f of files) {
@@ -743,17 +740,16 @@ async function init() {
       document.getElementById('xmlStatus').textContent = 'Error: ' + err.message;
     });
   });
-  document.getElementById('copyScript').addEventListener('click', async () => {
-    const status = document.getElementById('xmlStatus');
-    try {
-      const res = await fetch('./bajar-caps-smn.js?t=' + Date.now());
-      const script = await res.text();
-      await navigator.clipboard.writeText(script);
-      status.textContent = 'Script copiado. Abrí el RSS del SMN → F12 → Consola → Ctrl+V → Enter.';
-    } catch (err) {
-      status.textContent = 'No se pudo copiar: ' + err.message + '. Abrí docs/bajar-caps-smn.js y copiá el archivo a mano.';
-    }
-  });
+  const bm = document.getElementById('bookmarklet');
+  if (bm) {
+    fetch('./bajar-caps-smn.js?t=' + Date.now()).then((r) => r.text()).then((src) => {
+      bm.href = 'javascript:' + encodeURIComponent(src);
+    }).catch(() => {});
+    bm.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      alert('No lo toques acá. Agarralo con el mouse, arrastralo hasta la barra de favoritos de arriba y soltalo. Eso se hace una sola vez.');
+    });
+  }
   document.getElementById('dlWord').addEventListener('click', downloadWord);
   document.getElementById('dlPdf').addEventListener('click', downloadPdf);
 }
