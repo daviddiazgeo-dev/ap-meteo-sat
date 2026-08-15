@@ -53,9 +53,16 @@
   .manual-box a{color:var(--moss-500);}
   .manual-box input[type=file]{display:block;width:100%;font-size:11px;color:rgba(242,237,225,0.7);margin:6px 0;}
   .manual-box textarea{width:100%;min-height:64px;resize:vertical;background:var(--forest-950);color:var(--parchment);border:1px solid var(--line);border-radius:3px;font-size:11px;padding:6px;font-family:'JetBrains Mono',monospace;}
-  .manual-box button{margin-top:6px;background:var(--forest-700);color:var(--parchment);border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:11px;cursor:pointer;}
+  .manual-box button{margin-top:6px;margin-right:6px;background:var(--forest-700);color:var(--parchment);border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:11px;cursor:pointer;}
+  .manual-box button:hover{background:var(--forest-800);}
   .manual-box code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--moss-500);}
   .manual-status{margin-top:6px;font-size:10.5px;color:rgba(242,237,225,0.45);line-height:1.4;}
+  .dl-row{display:flex;gap:6px;padding:0 22px 8px 22px;}
+  .dl-row button{background:var(--forest-700);color:var(--parchment);border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:11px;cursor:pointer;}
+  .dl-row button:hover{background:var(--forest-800);}
+  .dl-row button:disabled{opacity:0.4;cursor:not-allowed;}
+  .park-group{margin:0 0 12px 0;}
+  .park-group .park-title{font-family:'Spectral',serif;font-size:13.5px;font-weight:600;padding:2px 2px 6px 2px;}
 
   .section-label{padding:12px 22px 8px 22px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(242,237,225,0.4);}
   .list{flex:1;overflow-y:auto;padding:0 14px 14px 14px;}
@@ -135,6 +142,10 @@
     </div>
 
     <div class="section-label">Alertas sobre áreas protegidas</div>
+    <div class="dl-row">
+      <button type="button" id="dlWord" disabled>Descargar Word</button>
+      <button type="button" id="dlPdf" disabled>Descargar PDF</button>
+    </div>
     <div class="list" id="areasList">
       <div class="empty-state"><div class="glyph">◈</div><p>Cargando datos publicados...</p></div>
     </div>
@@ -158,6 +169,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.18/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.18/vfs_fonts.min.js"></script>
 <script>
 
 const map = L.map('map', { zoomControl: false }).setView([-40.5, -65.5], 4);
@@ -177,6 +190,8 @@ const areasLayerGroup = L.layerGroup().addTo(map);
 const alertsLayerGroup = L.layerGroup().addTo(map);
 let areaLayersByName = {};
 let cachedAreasFc = null;
+let lastAfectadas = [];
+let lastResumen = null;
 const SEV_OK = new Set(['moderate', 'severe', 'extreme']);
 
 function esc(s) {
@@ -331,6 +346,118 @@ function colorOf(severity) {
   return { extreme: 'rojo', severe: 'naranja', moderate: 'amarillo' }[(severity || '').toLowerCase()] || 's/d';
 }
 
+function groupByPark(rows) {
+  const ordenColor = { rojo: 0, naranja: 1, amarillo: 2 };
+  const grouped = new Map();
+  (rows || []).forEach((row) => {
+    const key = row.area_protegida || 's/d';
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        nombre: key,
+        categoria: row.categoria || '',
+        provincia: row.provincia || '',
+        alertas: [],
+      });
+    }
+    grouped.get(key).alertas.push(row);
+  });
+  const parks = [...grouped.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  parks.forEach((p) => {
+    p.alertas.sort((a, b) => (ordenColor[a.color] ?? 9) - (ordenColor[b.color] ?? 9));
+  });
+  return parks;
+}
+
+function setDownloadEnabled(on) {
+  const word = document.getElementById('dlWord');
+  const pdf = document.getElementById('dlPdf');
+  if (word) word.disabled = !on;
+  if (pdf) pdf.disabled = !on;
+}
+
+function informeStamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
+function downloadWord() {
+  const parks = groupByPark(lastAfectadas);
+  if (!parks.length) return;
+  const generado = fmtFecha((lastResumen && lastResumen.generated_at) || new Date().toISOString());
+  const body = parks.map((p) => {
+    const items = p.alertas.map((a) =>
+      `<li><b>Fenómeno:</b> ${esc(a.fenomeno || 's/d')}<br>` +
+      `<b>Nivel de alerta:</b> ${esc(SEV_LABEL[a.color] || a.severidad || 's/d')}<br>` +
+      `<b>Vigencia:</b> ${esc(fmtFecha(a.inicio))} a ${esc(fmtFecha(a.fin))}</li>`
+    ).join('');
+    return `<h2>${esc(p.nombre)}</h2><p>${esc(p.categoria)} · ${esc(p.provincia)}</p><ul>${items}</ul>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Informe alertas SMN-APN</title>
+<style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt;color:#16201a;}
+h1{font-size:18pt;}h2{font-size:14pt;margin-top:18pt;}li{margin-bottom:8pt;}</style>
+</head><body>
+<h1>Informe de alertas SMN sobre Áreas Protegidas APN</h1>
+<p>Coordinación de Gestión Integral del Riesgo · Administración de Parques Nacionales</p>
+<p>Generado: ${esc(generado)}</p>
+<p>Solo se incluyen alertas vigentes que se superponen con un área protegida. Agrupado por parque.</p>
+${body}
+<p style="margin-top:24pt;font-size:10pt;color:#555">Índice de apoyo automatizado. No reemplaza la matriz institucional Probabilidad × Consecuencia de APN.</p>
+</body></html>`;
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `informe-alertas-apn-${informeStamp()}.doc`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadPdf() {
+  const parks = groupByPark(lastAfectadas);
+  if (!parks.length || !window.pdfMake) return;
+  const generado = fmtFecha((lastResumen && lastResumen.generated_at) || new Date().toISOString());
+  const content = [
+    { text: 'Informe de alertas SMN sobre Áreas Protegidas APN', style: 'h1' },
+    { text: 'Coordinación de Gestión Integral del Riesgo · Administración de Parques Nacionales', style: 'sub' },
+    { text: 'Generado: ' + generado, style: 'sub', margin: [0, 0, 0, 12] },
+    { text: 'Solo se incluyen alertas vigentes que se superponen con un área protegida. Agrupado por parque.', style: 'nota', margin: [0, 0, 0, 14] },
+  ];
+  parks.forEach((p) => {
+    content.push({ text: p.nombre, style: 'h2' });
+    content.push({ text: `${p.categoria} · ${p.provincia}`, style: 'meta' });
+    content.push({
+      ul: p.alertas.map((a) => ({
+        text: [
+          { text: 'Fenómeno: ', bold: true }, a.fenomeno || 's/d', '\n',
+          { text: 'Nivel de alerta: ', bold: true }, (SEV_LABEL[a.color] || a.severidad || 's/d'), '\n',
+          { text: 'Vigencia: ', bold: true }, `${fmtFecha(a.inicio)} a ${fmtFecha(a.fin)}`,
+        ],
+        margin: [0, 0, 0, 8],
+      })),
+      margin: [8, 4, 0, 10],
+    });
+  });
+  content.push({
+    text: 'Índice de apoyo automatizado. No reemplaza la matriz institucional Probabilidad × Consecuencia de APN.',
+    style: 'nota',
+    margin: [0, 16, 0, 0],
+  });
+  pdfMake.createPdf({
+    pageSize: 'A4',
+    pageMargins: [40, 40, 40, 40],
+    content,
+    styles: {
+      h1: { fontSize: 16, bold: true, color: '#122a20', margin: [0, 0, 0, 6] },
+      h2: { fontSize: 13, bold: true, color: '#1a3a2b', margin: [0, 10, 0, 2] },
+      sub: { fontSize: 9, color: '#444' },
+      meta: { fontSize: 9, color: '#555', margin: [0, 0, 0, 4] },
+      nota: { fontSize: 8, italics: true, color: '#666' },
+    },
+    defaultStyle: { fontSize: 10, color: '#16201a' },
+  }).download(`informe-alertas-apn-${informeStamp()}.pdf`);
+}
+
 function cruzar(alertas, areasFc) {
   const features = [];
   const afectadas = [];
@@ -408,6 +535,9 @@ function cruzar(alertas, areasFc) {
 function renderDashboard(areasFc, alertasFc, areasAfectadas, resumen, diagnostico, opts) {
   opts = opts || {};
   cachedAreasFc = areasFc;
+  lastAfectadas = areasAfectadas || [];
+  lastResumen = resumen || null;
+  setDownloadEnabled(lastAfectadas.length > 0);
   areasLayerGroup.clearLayers();
   alertsLayerGroup.clearLayers();
   areaLayersByName = {};
@@ -484,21 +614,23 @@ function renderDashboard(areasFc, alertasFc, areasAfectadas, resumen, diagnostic
   }
 
   listEl.replaceChildren();
-  const orden = { rojo: 0, naranja: 1, amarillo: 2 };
-  const ordenadas = [...areasAfectadas].sort((a, b) => (orden[a.color] ?? 9) - (orden[b.color] ?? 9));
-  ordenadas.forEach((a) => {
-    const card = el('div', 'area-card ' + (a.color || ''));
-    const top = el('div', 'top-row');
-    top.appendChild(el('div', 'nombre', a.fenomeno || 'Alerta'));
-    top.appendChild(el('div', 'sev-pill ' + (a.color || ''), 'Alerta ' + (SEV_LABEL[a.color] || a.severidad || '')));
-    card.appendChild(top);
-    card.appendChild(el('div', 'fenomeno', a.area_protegida || ''));
-    card.appendChild(el('div', 'meta', `${a.categoria || ''} · ${a.provincia || ''} · ${fmtFecha(a.inicio)} → ${fmtFecha(a.fin)}`));
-    card.addEventListener('click', () => {
-      const layer = areaLayersByName[a.area_protegida];
-      if (layer) { map.fitBounds(layer.getBounds(), { maxZoom: 9, padding: [40, 40] }); layer.openPopup(); }
+  groupByPark(areasAfectadas).forEach((park) => {
+    const group = el('div', 'park-group');
+    group.appendChild(el('div', 'park-title', park.nombre));
+    park.alertas.forEach((a) => {
+      const card = el('div', 'area-card ' + (a.color || ''));
+      const top = el('div', 'top-row');
+      top.appendChild(el('div', 'nombre', a.fenomeno || 'Alerta'));
+      top.appendChild(el('div', 'sev-pill ' + (a.color || ''), 'Alerta ' + (SEV_LABEL[a.color] || a.severidad || '')));
+      card.appendChild(top);
+      card.appendChild(el('div', 'meta', `Vigencia: ${fmtFecha(a.inicio)} → ${fmtFecha(a.fin)} · ${a.categoria || ''} · ${a.provincia || ''}`));
+      card.addEventListener('click', () => {
+        const layer = areaLayersByName[a.area_protegida];
+        if (layer) { map.fitBounds(layer.getBounds(), { maxZoom: 9, padding: [40, 40] }); layer.openPopup(); }
+      });
+      group.appendChild(card);
     });
-    listEl.appendChild(card);
+    listEl.appendChild(group);
   });
 }
 
@@ -622,6 +754,8 @@ async function init() {
       status.textContent = 'No se pudo copiar: ' + err.message + '. Abrí docs/bajar-caps-smn.js y copiá el archivo a mano.';
     }
   });
+  document.getElementById('dlWord').addEventListener('click', downloadWord);
+  document.getElementById('dlPdf').addEventListener('click', downloadPdf);
 }
 
 init();
