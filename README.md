@@ -14,7 +14,7 @@ Pensado para la Coordinación de Gestión Integral del Riesgo: saber *si* una al
 
 | Autor | Rol |
 |---|---|
-| **David Diaz** | Definición del problema institucional, validación con Áreas Protegidas APN y operación del sistema en Gestión Integral del Riesgo. |
+| **David Diaz** | Definición del problema institucional, validación en Gestión Integral del Riesgo. |
 | **Diego Coria** | Diseño e implementación del software (Python, visor web, GitHub Actions, informe Word/PDF). |
 
 
@@ -33,8 +33,6 @@ Este proyecto:
 4. Muestra en un mapa **solo las coincidencias**, con fenómeno y nivel (amarillo / naranja / rojo).
 5. Permite descargar un **informe agrupado por parque** (Word y PDF).
 6. Puede enviar mail por Gmail cuando hay un corte del sistema o, si GitHub llega a leer al SMN, cuando aparece una coincidencia nueva.
-
-No reemplaza la matriz institucional Probabilidad × Consecuencia de APN ni el juicio del personal. Es un **índice de apoyo**.
 
 ---
 
