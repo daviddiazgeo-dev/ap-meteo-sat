@@ -1,33 +1,33 @@
 {
-  "generated_at": "2026-08-15T01:01:15.630625+00:00",
+  "generated_at": "2026-08-15T02:35:40.526284+00:00",
   "sistema_ciego": true,
   "smn_canales": [
     {
       "canal": "Alertas y Advertencias",
-      "url_usada": "https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml",
+      "url_usada": null,
       "rss_accedido": false,
       "links_cap_encontrados": 0,
       "xml_cap_descargados_ok": 0,
       "xml_cap_descargados_fallidos": 0,
-      "error": "403 Client Error: Forbidden for url: https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml"
+      "error": "Bloqueo antibot (HTTP 403) al pedir https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml"
     },
     {
       "canal": "Temperaturas Extremas",
-      "url_usada": "https://ssl.smn.gob.ar/feeds/CAP/oladecalor/rss_ola_calor_nuevo.xml",
+      "url_usada": null,
       "rss_accedido": false,
       "links_cap_encontrados": 0,
       "xml_cap_descargados_ok": 0,
       "xml_cap_descargados_fallidos": 0,
-      "error": "403 Client Error: Forbidden for url: https://ssl.smn.gob.ar/feeds/CAP/oladecalor/rss_ola_calor_nuevo.xml"
+      "error": "Bloqueo antibot (HTTP 403) al pedir https://ws2.smn.gob.ar/feeds/CAP/oladecalor/rss_ola_calor_nuevo.xml"
     },
     {
       "canal": "Aviso a Muy Corto Plazo",
-      "url_usada": "https://ssl.smn.gob.ar/feeds/CAP/avisocortoplazo/rss_acpCAP.xml",
+      "url_usada": null,
       "rss_accedido": false,
       "links_cap_encontrados": 0,
       "xml_cap_descargados_ok": 0,
       "xml_cap_descargados_fallidos": 0,
-      "error": "403 Client Error: Forbidden for url: https://ssl.smn.gob.ar/feeds/CAP/avisocortoplazo/rss_acpCAP.xml"
+      "error": "Bloqueo antibot (HTTP 403) al pedir https://ws2.smn.gob.ar/feeds/CAP/avisocortoplazo/rss_acpCAP.xml"
     }
   ],
   "areas_apn": {
@@ -36,5 +36,6 @@
     "cantidad_areas_cargadas": 52
   },
   "alertas_severidad_relevante": 0,
-  "alertas_ignoradas_por_severidad": 0
+  "alertas_ignoradas_por_severidad": 0,
+  "alertas_sin_geometria": 0
 }

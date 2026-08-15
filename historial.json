@@ -1,3 +1,10 @@
 {
-  "enviados": []
+  "enviados": [
+    {
+      "clave": "SISTEMA_CIEGO",
+      "identifier": "SISTEMA_CIEGO",
+      "area": "",
+      "fecha_envio": "2026-08-15T02:35:40.526284+00:00"
+    }
+  ]
 }
