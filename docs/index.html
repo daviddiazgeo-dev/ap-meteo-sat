@@ -70,7 +70,7 @@
   .park-group .park-title{font-family:'Spectral',serif;font-size:13.5px;font-weight:600;padding:2px 2px 6px 2px;}
 
   .section-label{padding:12px 22px 8px 22px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(242,237,225,0.4);}
-  .list{padding:0 14px 18px 14px;}
+  .list{position:relative;z-index:1;padding:0 14px 28px 14px;background:transparent;}
 
   .empty-state{margin:12px 8px;padding:18px 16px;border:1px solid var(--line);border-radius:4px;text-align:center;}
   .empty-state .glyph{font-size:20px;margin-bottom:6px;opacity:0.5;}
@@ -90,7 +90,7 @@
   .area-card .fenomeno{font-size:11.5px;color:rgba(242,237,225,0.7);}
   .area-card .meta{margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(242,237,225,0.35);}
 
-  .footer-note{padding:12px 22px 20px 22px;border-top:1px solid var(--line);font-size:10px;color:rgba(242,237,225,0.35);line-height:1.5;}
+  .footer-note{position:static;margin:0 22px 12px 22px;padding:8px 0 0 0;border-top:1px solid var(--line);font-size:10px;color:rgba(242,237,225,0.35);line-height:1.45;}
   .footer-note a{color:var(--moss-500);}
 
   .map-wrap{position:relative;height:100%;min-height:0;overflow:hidden;}
@@ -125,6 +125,9 @@
       </div>
       <div class="summary-updated" id="sumUpdatedWrap"><span class="dot"></span><span id="sumUpdated">Cargando...</span></div>
     </div>
+    <div class="footer-note">
+      Fuente meteorológica: <a href="https://www.smn.gob.ar" target="_blank" rel="noopener">SMN · Sistema de Alerta Temprana</a>. Índice visual de apoyo — no reemplaza la matriz institucional Probabilidad × Consecuencia de APN.
+    </div>
     <div class="sys-banner" id="sysBanner"></div>
 
     <div class="section-label">Cómo cargar las alertas</div>
@@ -145,10 +148,6 @@
     </div>
     <div class="list" id="areasList">
       <div class="empty-state"><div class="glyph">◈</div><p>Cargando datos publicados...</p></div>
-    </div>
-
-    <div class="footer-note">
-      Datos generados automáticamente cada hora por GitHub Actions. Fuente meteorológica: <a href="https://www.smn.gob.ar" target="_blank" rel="noopener">SMN · Sistema de Alerta Temprana</a>. Índice visual de apoyo — no reemplaza la matriz institucional Probabilidad × Consecuencia de APN.
     </div>
   </aside>
 
