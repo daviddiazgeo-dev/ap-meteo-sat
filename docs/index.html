@@ -54,7 +54,7 @@
   .manual-box input[type=file]{display:block;width:100%;font-size:11px;color:rgba(242,237,225,0.7);margin:6px 0;}
   .manual-box textarea{width:100%;min-height:64px;resize:vertical;background:var(--forest-950);color:var(--parchment);border:1px solid var(--line);border-radius:3px;font-size:11px;padding:6px;font-family:'JetBrains Mono',monospace;}
   .manual-box button{margin-top:6px;background:var(--forest-700);color:var(--parchment);border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:11px;cursor:pointer;}
-  .manual-box button:hover{background:var(--forest-800);}
+  .manual-box code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--moss-500);}
   .manual-status{margin-top:6px;font-size:10.5px;color:rgba(242,237,225,0.45);line-height:1.4;}
 
   .section-label{padding:12px 22px 8px 22px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(242,237,225,0.4);}
@@ -119,15 +119,18 @@
 
     <div class="section-label">Carga manual SMN</div>
     <div class="manual-box">
-      <p>GitHub no puede leer al SMN. Abrí los RSS en el navegador, guardá cada XML de alerta y cargalos acá. El cruce se hace en esta sesión, en tu PC.</p>
+      <p><b>1.</b> Abrí el RSS del SMN en otra pestaña (tu navegador sí puede).</p>
+      <p><b>2.</b> Ahí: F12 → Consola → pegá el script → Enter. Se baja un solo archivo <code>smn-alertas.json</code> con todos los CAP (no hace falta abrir los ~100 links).</p>
+      <p><b>3.</b> Volvé acá, elegí ese JSON y tocá Procesar.</p>
       <p>
         <a href="https://ssl.smn.gob.ar/feeds/CAP/rss_alertaCAP_nuevo_2026.xml" target="_blank" rel="noopener">Alertas</a>
         · <a href="https://ssl.smn.gob.ar/feeds/CAP/oladecalor/rss_ola_calor_nuevo.xml" target="_blank" rel="noopener">Ola de calor</a>
         · <a href="https://ssl.smn.gob.ar/feeds/CAP/avisocortoplazo/rss_acpCAP.xml" target="_blank" rel="noopener">ACP</a>
       </p>
-      <input id="xmlFiles" type="file" accept=".xml,text/xml,application/xml,.txt" multiple />
-      <textarea id="xmlPaste" placeholder="O pegá acá el XML (RSS o CAP) y tocá Procesar"></textarea>
-      <button type="button" id="xmlProcess">Procesar XML</button>
+      <button type="button" id="copyScript">Copiar script para la consola del SMN</button>
+      <input id="xmlFiles" type="file" accept=".json,.xml,text/xml,application/xml,.txt,application/json" multiple />
+      <textarea id="xmlPaste" placeholder="O pegá acá un XML suelto"></textarea>
+      <button type="button" id="xmlProcess">Procesar</button>
       <div class="manual-status" id="xmlStatus"></div>
     </div>
 
@@ -493,23 +496,39 @@ function renderDashboard(areasFc, alertasFc, areasAfectadas, resumen, diagnostic
   });
 }
 
+function expandIncomingText(raw, name) {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const data = JSON.parse(trimmed);
+      const items = Array.isArray(data) ? data : (data.alerts || []);
+      return items.map((item, i) => ({
+        xml: typeof item === "string" ? item : (item && item.xml) || "",
+        name: (item && item.url) || (name + "#" + (i + 1)),
+      })).filter((x) => x.xml);
+    } catch (e) {
+      return [{ xml: trimmed, name }];
+    }
+  }
+  return [{ xml: trimmed, name }];
+}
+
 function processXmlTexts(texts) {
   const parser = new DOMParser();
   const alertas = [];
   const pendingLinks = [];
   let rssCount = 0;
   texts.forEach((xml, idx) => {
-    const doc = parser.parseFromString(xml, 'application/xml');
-    if (doc.querySelector('parsererror')) return;
+    const doc = parser.parseFromString(xml, "application/xml");
+    if (doc.querySelector("parsererror")) return;
     if (isRssOrAtom(doc)) {
       rssCount += 1;
       pendingLinks.push(...extractCapLinks(doc));
-      const embedded = parseCapDoc(doc, 'RSS');
-      if (embedded && (embedded.geom || embedded.event)) {
-        if (embedded.geom) alertas.push(embedded);
-      }
+      const embedded = parseCapDoc(doc, "RSS");
+      if (embedded && embedded.geom) alertas.push(embedded);
     } else {
-      const cap = parseCapDoc(doc, texts._names && texts._names[idx] ? texts._names[idx] : 'CAP');
+      const cap = parseCapDoc(doc, texts._names && texts._names[idx] ? texts._names[idx] : "CAP");
       if (cap) alertas.push(cap);
     }
   });
@@ -517,45 +536,45 @@ function processXmlTexts(texts) {
 }
 
 async function handleManualXml() {
-  const status = document.getElementById('xmlStatus');
+  const status = document.getElementById("xmlStatus");
   if (!cachedAreasFc) {
-    status.textContent = 'Todavía no cargaron las áreas protegidas. Esperá un segundo y reintentá.';
+    status.textContent = "Todavía no cargaron las áreas protegidas. Esperá un segundo y reintentá.";
     return;
   }
-  const files = document.getElementById('xmlFiles').files;
-  const paste = document.getElementById('xmlPaste').value.trim();
+  const files = document.getElementById("xmlFiles").files;
+  const paste = document.getElementById("xmlPaste").value.trim();
   const texts = [];
   texts._names = [];
   for (const f of files) {
-    texts.push(await f.text());
-    texts._names.push(f.name);
+    const raw = await f.text();
+    expandIncomingText(raw, f.name).forEach((item) => {
+      texts.push(item.xml);
+      texts._names.push(item.name);
+    });
   }
   if (paste) {
-    texts.push(paste);
-    texts._names.push('pegado');
+    expandIncomingText(paste, "pegado").forEach((item) => {
+      texts.push(item.xml);
+      texts._names.push(item.name);
+    });
   }
   if (!texts.length) {
-    status.textContent = 'Elegí archivos XML o pegá el contenido.';
+    status.textContent = "Elegí smn-alertas.json (o XML) y tocá Procesar.";
     return;
   }
   const { alertas, pendingLinks, rssCount } = processXmlTexts(texts);
   const conGeom = alertas.filter((a) => a.geom);
-  let msg = `${alertas.length} alerta(s) leída(s), ${conGeom.length} con polígono.`;
+  let msg = texts.length + " XML, " + alertas.length + " alerta(s), " + conGeom.length + " con polígono.";
   if (rssCount && pendingLinks.length && conGeom.length === 0) {
-    msg += ' El RSS es sólo el índice. Abrí cada link .xml en el navegador, guardá esos archivos y cargalos todos juntos.';
-    if (pendingLinks.length <= 8) msg += ' Links: ' + pendingLinks.join(' · ');
-    else msg += ` Hay ${pendingLinks.length} XML CAP para bajar.`;
+    msg += " Eso es el índice RSS. Usá el script de consola para bajar todos los CAP de una vez.";
     status.textContent = msg;
     return;
-  }
-  if (pendingLinks.length && conGeom.length) {
-    msg += ` Si faltan alertas, bajá también estos CAP (${pendingLinks.length}).`;
   }
   const { alertasFc, areasAfectadas, resumen } = cruzar(alertas, cachedAreasFc);
   renderDashboard(cachedAreasFc, alertasFc, areasAfectadas, resumen, null, { manual: true });
   status.textContent = msg + (areasAfectadas.length
-    ? ` Superpone ${resumen.total_areas_afectadas} área(s) protegida(s).`
-    : ' Ninguna se superpone con un área protegida vigente.');
+    ? " Superpone " + resumen.total_areas_afectadas + " área(s) protegida(s)."
+    : " Ninguna se superpone con un área protegida vigente.");
 }
 
 async function init() {
@@ -585,6 +604,17 @@ async function init() {
     handleManualXml().catch((err) => {
       document.getElementById('xmlStatus').textContent = 'Error: ' + err.message;
     });
+  });
+  document.getElementById('copyScript').addEventListener('click', async () => {
+    const status = document.getElementById('xmlStatus');
+    try {
+      const res = await fetch('./bajar-caps-smn.js?t=' + Date.now());
+      const script = await res.text();
+      await navigator.clipboard.writeText(script);
+      status.textContent = 'Script copiado. Abrí el RSS del SMN → F12 → Consola → Ctrl+V → Enter.';
+    } catch (err) {
+      status.textContent = 'No se pudo copiar: ' + err.message + '. Abrí docs/bajar-caps-smn.js y copiá el archivo a mano.';
+    }
   });
 }
 
