@@ -1,11 +1,12 @@
 name: Monitor SMN - Áreas Protegidas APN
 
+# Sin cron: GitHub Actions no puede leer ssl.smn.gob.ar (Cloudflare 403),
+# el job quedaba en rojo cada hora y GitHub mandaba mail de fallo.
+# La operación real es el favorito + visor. Este workflow queda solo
+# para disparo manual (pestaña Actions), y no se marca como fallido
+# si el SMN está bloqueado.
 on:
-  schedule:
-    # Cada hora, en el minuto 0. GitHub puede demorar el disparo unos
-    # minutos en horarios de alta demanda; es normal y no afecta el flujo.
-    - cron: "0 * * * *"
-  workflow_dispatch: {}  # permite disparar la revisión manualmente desde la pestaña "Actions"
+  workflow_dispatch: {}
 
 permissions:
   contents: write  # necesario para que el workflow pueda hacer commit de los productos generados
@@ -49,10 +50,3 @@ jobs:
         with:
           commit_message: "Actualiza alertas SMN y áreas afectadas [skip ci]"
           file_pattern: "docs/data/*.json docs/data/*.geojson historial.json"
-
-      - name: Fallar si el SMN quedó inaccesible
-        if: steps.monitor.outcome == 'failure'
-        run: |
-          echo "El monitor terminó con error (sistema ciego o fallo de ejecución)."
-          echo "Revisá docs/data/diagnostico.json en el commit publicado y el banner del visor."
-          exit 1

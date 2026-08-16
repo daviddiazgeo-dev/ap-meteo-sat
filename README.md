@@ -72,14 +72,14 @@ Por eso hay **dos capas**:
 | Capa | Qué hace | Dónde corre |
 |---|---|---|
 | **Operativa (hoy)** | La persona abre el RSS en su navegador (Cloudflare la deja pasar). Un favorito baja todos los CAP a un JSON. El visor cruza en el cliente con Turf.js y las geometrías APN. | Navegador |
-| **Infraestructura** | Hospeda el visor (GitHub Pages), corre un job horario en Python, intenta el SMN, carga áreas (WFS o shapefile), manda mail de *watchdog* si el SMN está inaccesible, publica `diagnostico.json`. | GitHub Actions + Pages |
+| **Infraestructura** | Hospeda el visor (GitHub Pages). El script Python queda para autotest y disparo manual; no corre solo cada hora. | GitHub Pages + Actions (manual) |
 
 Si en el futuro GitHub pudiera leer los feeds, el mismo script Python ya cruza geometrías con GeoPandas/Shapely y puede mandar un mail por cada par `identifier CAP + área` no notificado.
 
 ### Stack
 
 - **Python 3.11:** `requests`, `geopandas`, `shapely` — parseo CAP 1.2, polígonos `lat,lon` → GeoJSON, `make_valid`, intersección, SMTP.
-- **GitHub Actions:** cron horario + disparo manual; secrets para SMTP; autotest de geometría (Iguazú) sin red; commit de productos; el job termina en rojo a propósito si los 3 canales SMN fallan (no finge un día calmo).
+- **GitHub Actions:** solo disparo manual (sin cron). El SMN bloquea las IPs de GitHub (403); un job horario en rojo generaba mails de fallo de GitHub. El visor no depende de esa corrida.
 - **GitHub Pages:** visor Leaflet + teselas IGN, carga manual, informe pdfmake / Word HTML.
 - **Datos:** WFS `geonode:apn_limite` y respaldo `data/SiFAP_APN.*` (EPSG:4326, encoding ISO-8859-1).
 
@@ -95,11 +95,8 @@ smn-alertas.json  ──►  visor (Turf.js ∩ áreas APN)
                               ├─ lista agrupada por parque
                               └─ Word / PDF
 
-GitHub Actions (cada hora, sin PC)
-        │  intenta los 3 RSS
-        ▼
-   403 Cloudflare  ──►  diagnostico.json + mail [ALERTA SISTEMA]
-                   ──►  visor muestra banner “sistema ciego”
+GitHub Pages
+        └── hospeda el visor (no baja las alertas del SMN)
 ```
 
 ### Severidad
@@ -116,7 +113,7 @@ El feed principal se llama `rss_alertaCAP_nuevo_AAAA.xml`. El script Python prue
 
 ```
 .
-├── .github/workflows/monitor_apn.yml   Reloj horario + secrets → config.json
+├── .github/workflows/monitor_apn.yml   Disparo manual (sin cron) + secrets → config.json
 ├── scripts/monitor_smn_apn.py          Monitor Python (CAP, GIS, mail, autotest)
 ├── data/SiFAP_APN.*                    Respaldo de áreas protegidas
 ├── docs/                               GitHub Pages
@@ -150,15 +147,9 @@ Gmail exige verificación en 2 pasos para crear la contraseña de aplicación: [
 
 Más destinatarios: editar `APN_RECIPIENTS_JSON` con la lista completa, por ejemplo `["david.diaz.geo@gmail.com","otra@apn.gob.ar"]`.
 
-### Qué hace el workflow cada hora
+### Workflow (solo manual)
 
-1. Autotest: polígono sintético sobre Iguazú ∩ shapefile.
-2. Arma `config.json` desde secrets (sin heredoc bash).
-3. Intenta WFS APN y los 3 RSS SMN.
-4. Publica `docs/data/*` e `historial.json`.
-5. Si ningún RSS respondió: mail `[ALERTA SISTEMA]…` (una vez por corte) y el job queda en rojo.
-
-Un workflow rojo con `sistema_ciego: true` **no es un crash**: es el diagnóstico correcto. Ver [diagnostico.json](https://daviddiazgeo-dev.github.io/david-sat/data/diagnostico.json).
+No hay cron. GitHub Actions no puede leer el SMN (Cloudflare 403) y un fallo cada hora llenaba la casilla de mails de GitHub. Si hace falta, se dispara a mano desde la pestaña Actions: autotest de Iguazú, `config.json` desde secrets, intento de RSS/WFS y publicación de `docs/data/*`. Si el SMN sigue bloqueado, el job **no se marca en rojo**.
 
 ---
 
@@ -166,7 +157,7 @@ Un workflow rojo con `sistema_ciego: true` **no es un crash**: es el diagnóstic
 
 GitHub Actions corre en IPs de datacenter. Cloudflare del SMN las bloquea. **No hay modo 24×7 gratuito, sin PC prendida y sin pedir whitelist**, que lea los CAP desde Actions.
 
-Por eso la operación real es el **favorito + visor**. El job horario sigue siendo útil: hospeda el sitio, prueba las fuentes y avisa por mail si el corte continúa o si algún día el SMN deja de bloquear.
+Por eso la operación real es el **favorito + visor**. El sitio lo sirve GitHub Pages; no hace falta un job cada hora.
 
 ---
 
